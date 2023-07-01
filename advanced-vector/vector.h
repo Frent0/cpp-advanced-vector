@@ -347,7 +347,7 @@ typename Vector<T>::iterator Vector<T>::Emplace(const_iterator pos, Args&&... ar
             T temp(std::forward<Args>(args)...);
             new(end()) T(std::forward<T>(*std::prev(end())));
 
-            std::move_backward(begin() + position,std::prev(end(),end()));
+            std::move_backward(begin() + position,std::prev(end()),end());
             *(data_.GetAddress() + position) = std::forward<T>(temp);
             ++size_;
         }
