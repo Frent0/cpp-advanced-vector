@@ -205,13 +205,12 @@ public:
 
             if (size_ > 0) {
                 if (cbegin() != pos) {
-                    auto head_size = std::distance(cbegin(), pos);
                     try {
                         if constexpr (std::is_nothrow_move_constructible_v<T> || !std::is_copy_constructible_v<T>) {
-                            std::uninitialized_move_n(begin(), head_size, new_data.GetAddress());
+                            std::uninitialized_move_n(begin(), distance, new_data.GetAddress());
                         }
                         else {
-                            std::uninitialized_copy_n(begin(), head_size, new_data.GetAddress());
+                            std::uninitialized_copy_n(begin(), distance, new_data.GetAddress());
                         }
                     }
                     catch (...) {
@@ -221,17 +220,16 @@ public:
                 }
 
                 if (cend() != pos) {
-                    auto tail_size = std::distance(pos, cend());
                     try {
                         if constexpr (std::is_nothrow_move_constructible_v<T> || !std::is_copy_constructible_v<T>) {
-                            std::uninitialized_move_n(begin() + distance, tail_size, new_data.GetAddress() + distance + 1);
+                            std::uninitialized_move_n(begin() + distance, size_ - distance, new_data.GetAddress() + distance + 1);
                         }
                         else {
-                            std::uninitialized_copy_n(begin() + distance, tail_size, new_data.GetAddress() + distance + 1);
+                            std::uninitialized_copy_n(begin() + distance, size_ - distance, new_data.GetAddress() + distance + 1);
                         }
                     }
                     catch (...) {
-                        std::destroy_n(new_data.GetAddress(), distance);
+                        std::destroy_n(new_data.GetAddress(), size_);
                         throw;
                     }
                 }
@@ -249,13 +247,20 @@ public:
                 *pos_ = std::forward<T>(copy);
             }
             else {
-                new(pos_) T(std::forward<Args>(args)...);
+                try {
+                    new(pos_) T(std::forward<Args>(args)...);
+                }
+                catch (...) {
+                    std::destroy_at(pos_);
+                    throw;
+                }
             }
         }
         ++size_;
 
         return data_.GetAddress() + distance;
     }
+
 
     iterator Insert(const_iterator pos, const T& item) {
         return Emplace(pos, item);
